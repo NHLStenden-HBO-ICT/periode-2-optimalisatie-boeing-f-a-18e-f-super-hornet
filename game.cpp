@@ -117,17 +117,8 @@ bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
     return ((line_end.x - line_start.x) * (point.y - line_start.y) - (line_end.y - line_start.y) * (point.x - line_start.x)) < 0;
 }
 
-// -----------------------------------------------------------
-// Update the game state:
-// Move all objects
-// Update sprite frames
-// Collision detection
-// Targeting etc..
-// -----------------------------------------------------------
-void Game::update(float deltaTime)
-{
-    //Calculate the route to the destination for each tank using BFS
-    //Initializing routes here so it gets counted for performance..
+//------------------------------------------------------------ segmentated functions from update, might get own files later.
+void Game::calc_tank_route(){
     if (frame_count == 0)
     {
         for (Tank& t : tanks)
@@ -135,8 +126,10 @@ void Game::update(float deltaTime)
             t.set_route(background_terrain.get_route(t, t.target));
         }
     }
+}
 
-    //Check tank collision and nudge tanks away from each other
+
+void Game::check_tank_collision() {
     for (Tank& tank : tanks)
     {
         if (tank.active)
@@ -158,8 +151,9 @@ void Game::update(float deltaTime)
             }
         }
     }
+}
 
-    //Update tanks
+void Game::update_tanks() {
     for (Tank& tank : tanks)
     {
         if (tank.active)
@@ -178,6 +172,51 @@ void Game::update(float deltaTime)
             }
         }
     }
+}
+
+vec2 Game::find_first_active_tank(int& first_active) {
+
+    first_active = 0;
+    for (size_t i = 0; i < tanks.size(); ++i) {
+        if (tanks[i].active) {
+            first_active = i;
+            return tanks[i].position; // Return the position of the first active tank
+        }
+    }
+}
+
+
+void Game::find_left_most_tank(vec2 point_on_hull){
+    for (Tank& tank : tanks)
+    {
+        if (tank.active)
+        {
+            if (tank.position.x <= point_on_hull.x)
+            {
+                point_on_hull = tank.position;
+            }
+        }
+    }
+
+}
+// -----------------------------------------------------------
+// Update the game state:
+// Move all objects
+// Update sprite frames
+// Collision detection
+// Targeting etc..
+// -----------------------------------------------------------
+void Game::update(float deltaTime)
+{
+    //Calculate the route to the destination for each tank using BFS
+    //Initializing routes here so it gets counted for performance..
+    calc_tank_route();
+
+    //Check tank collision and nudge tanks away from each other
+    check_tank_collision();
+
+    //Update tanks
+    update_tanks();
 
     //Update smoke plumes
     for (Smoke& smoke : smokes)
@@ -189,27 +228,10 @@ void Game::update(float deltaTime)
     forcefield_hull.clear();
 
     //Find first active tank (this loop is a bit disgusting, fix?)
-    int first_active = 0;
-    for (Tank& tank : tanks)
-    {
-        if (tank.active)
-        {
-            break;
-        }
-        first_active++;
-    }
-    vec2 point_on_hull = tanks.at(first_active).position;
+    int first_active;
+    vec2 point_on_hull = find_first_active_tank(first_active);
     //Find left most tank position
-    for (Tank& tank : tanks)
-    {
-        if (tank.active)
-        {
-            if (tank.position.x <= point_on_hull.x)
-            {
-                point_on_hull = tank.position;
-            }
-        }
-    }
+    find_left_most_tank(point_on_hull);
 
     //Calculate convex hull for 'rocket barrier'
     while (true)

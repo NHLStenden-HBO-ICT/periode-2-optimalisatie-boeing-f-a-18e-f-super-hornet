@@ -21,6 +21,12 @@ class Game
     void draw_health_bars(const std::vector<const Tank*>& sorted_tanks, const int team);
     void measure_performance();
 
+
+    void calc_tank_route();
+    void check_tank_collision();
+    void update_tanks();
+    vec2 find_first_active_tank(int& first_active);
+    void find_left_most_tank(vec2 point_on_hull);
     Tank& find_closest_enemy(Tank& current_tank);
 
     void mouse_up(int button)
