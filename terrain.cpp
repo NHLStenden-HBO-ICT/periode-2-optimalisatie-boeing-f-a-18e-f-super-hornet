@@ -127,7 +127,28 @@ namespace Tmpl8
             }
         }
     }
+    //A* testing
+    // ------------------------------------------------------------------------------------------------
+    vector<vec2> Terrain::get_route_Astar(const Tank& tank, const vec2& target) {
+        //Find start and target tile
+        const size_t pos_x = tank.position.x / sprite_size;
+        const size_t pos_y = tank.position.y / sprite_size;
 
+        const size_t target_x = target.x / sprite_size;
+        const size_t target_y = target.y / sprite_size;
+
+        std::vector<TerrainTile*> open_nodes;
+        std::vector<TerrainTile*> closed_nodes;
+        open_nodes.push_back(&tiles.at(pos_y).at(pos_x));
+
+        if (!open_nodes.empty()) {
+
+        }
+
+        return  std::vector<vec2>(); //temp return value so code can compile
+    }
+    // ------------------------------------------------------------------------------------------------
+    
     //Use Breadth-first search to find shortest route to the destination
     vector<vec2> Terrain::get_route(const Tank& tank, const vec2& target)
     {
