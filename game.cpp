@@ -1,7 +1,7 @@
 #include "precomp.h" // include (only) this in every .cpp file
-
-constexpr auto num_tanks_blue = 2048;
-constexpr auto num_tanks_red = 2048;
+#include <iostream>
+constexpr auto num_tanks_blue = 500; //2048
+constexpr auto num_tanks_red = 1;
 
 constexpr auto tank_max_health = 1000;
 constexpr auto rocket_hit_value = 60;
@@ -111,10 +111,12 @@ Tank& Game::find_closest_enemy(Tank& current_tank)
     return tanks.at(closest_index);
 }
 
+int leftiterator = 0;
 //Checks if a point lies on the left of an arbitrary angled line
-bool Tmpl8::Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
+bool Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 {
-    return ((line_end.x - line_start.x) * (point.y - line_start.y) - (line_end.y - line_start.y) * (point.x - line_start.x)) < 0;
+    bool answer =  ((line_end.x - line_start.x) * (point.y - line_start.y) - (line_end.y - line_start.y) * (point.x - line_start.x)) < 0;
+    return answer;
 }
 
 //------------------------------------------------------------ segmentated functions from update, might get own files later.
@@ -206,6 +208,7 @@ void Game::find_left_most_tank(vec2 point_on_hull){
 }
 
 void Game::calculate_convex_hull(vec2 point_on_hull,int first_active) {
+    int stuckcounter = 1;
     while (true)
     {
         //Add last found point
@@ -232,7 +235,12 @@ void Game::calculate_convex_hull(vec2 point_on_hull,int first_active) {
         //If we went all the way around we are done.
         if (endpoint == forcefield_hull.at(0))
         {
+            stuckcounter = 0;
             break;
+        }
+        else {
+            std::cout << "stuck " << stuckcounter << "\n";
+            stuckcounter++;
         }
     }
 }
@@ -306,7 +314,7 @@ void Game::update(float deltaTime)
     //Calculate the route to the destination for each tank using BFS
     //Initializing routes here so it gets counted for performance..
     calc_tank_route();
-
+    
     //Check tank collision and nudge tanks away from each other
     check_tank_collision();
 
@@ -535,6 +543,7 @@ void Game::tick(float deltaTime)
 
     //Print frame count
     frame_count++;
+    std::cout << std::to_string(frame_count) << std::endl;
     string frame_count_string = "FRAME: " + std::to_string(frame_count);
     frame_count_font->print(screen, frame_count_string.c_str(), 350, 580);
 }
