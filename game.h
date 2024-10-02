@@ -26,7 +26,6 @@ class Game
     void check_tank_collision();
     void update_tanks();
     vec2 find_first_active_tank(int& first_active);
-    void find_left_most_tank(vec2 point_on_hull);
     Tank& find_closest_enemy(Tank& current_tank);
     void calculate_convex_hull(vec2 point_on_hull, int first_active);
     void update_rockets();

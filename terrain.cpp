@@ -127,25 +127,85 @@ namespace Tmpl8
             }
         }
     }
-    //A* testing
+    //greedy testing
     // ------------------------------------------------------------------------------------------------
-    vector<vec2> Terrain::get_route_Astar(const Tank& tank, const vec2& target) {
-        //Find start and target tile
-        const size_t pos_x = tank.position.x / sprite_size;
-        const size_t pos_y = tank.position.y / sprite_size;
+    // A helper structure for comparison in priority queue (min-heap)
+    struct Node {
+        TerrainTile* tile;
+        float h_cost; // Only the heuristic cost is considered
 
-        const size_t target_x = target.x / sprite_size;
-        const size_t target_y = target.y / sprite_size;
-
-        std::vector<TerrainTile*> open_nodes;
-        std::vector<TerrainTile*> closed_nodes;
-        open_nodes.push_back(&tiles.at(pos_y).at(pos_x));
-
-        if (!open_nodes.empty()) {
-
+        bool operator>(const Node& other) const {
+            return h_cost > other.h_cost;
         }
+    };
+    // Heuristic function: Euclidean distance
+    float heuristic(const vec2& a, const vec2& b) {
+        return sqrt(pow(b.x - a.x, 2) + pow(b.y - a.y, 2));
+    }
+    vector<vec2> Terrain::get_route_greedy(const Tank& tank, const vec2& target) {
+            // Find start and target tile
+            const size_t start_x = tank.position.x / sprite_size;
+            const size_t start_y = tank.position.y / sprite_size;
+            const size_t target_x = target.x / sprite_size;
+            const size_t target_y = target.y / sprite_size;
 
-        return  std::vector<vec2>(); //temp return value so code can compile
+            TerrainTile* start_tile = &tiles.at(start_y).at(start_x);
+            TerrainTile* target_tile = &tiles.at(target_y).at(target_x);
+
+            // Min-heap priority queue for open set
+            std::priority_queue<Node, std::vector<Node>, std::greater<Node>> open_set;
+
+            // Push the start tile with its heuristic cost
+            float h_start = heuristic(vec2(start_tile->position_x * sprite_size, start_tile->position_y * sprite_size),
+                vec2(target_x * sprite_size, target_y * sprite_size));
+            open_set.push({ start_tile, h_start });
+
+            // Map to store parent of each tile
+            std::unordered_map<TerrainTile*, TerrainTile*> came_from;
+
+            bool route_found = false;
+            TerrainTile* current_tile = nullptr;
+
+            // Greedy Best-First Search
+            while (!open_set.empty()) {
+                Node current_node = open_set.top();
+                open_set.pop();
+                current_tile = current_node.tile;
+
+                // Check if target is reached
+                if (current_tile->position_x == target_x && current_tile->position_y == target_y) {
+                    route_found = true;
+                    break;
+                }
+
+                // Explore neighbors
+                for (TerrainTile* neighbor : current_tile->exits) {
+                    // Only consider heuristic cost (h_cost), no g_cost
+                    float h_cost = heuristic(
+                        vec2(neighbor->position_x * sprite_size, neighbor->position_y * sprite_size),
+                        vec2(target_x * sprite_size, target_y * sprite_size));
+
+                    // If the neighbor has not been visited, add it to the open set
+                    if (came_from.find(neighbor) == came_from.end()) {
+                        open_set.push({ neighbor, h_cost });
+                        came_from[neighbor] = current_tile;
+                    }
+                }
+            }
+
+            // Reconstruct path if found
+            std::vector<vec2> route;
+            if (route_found) {
+                while (current_tile != start_tile) {
+                    route.push_back(vec2((float)current_tile->position_x * sprite_size, (float)current_tile->position_y * sprite_size));
+                    current_tile = came_from[current_tile];
+                }
+                route.push_back(vec2((float)start_tile->position_x * sprite_size, (float)start_tile->position_y * sprite_size));
+                std::reverse(route.begin(), route.end());
+            }
+
+            return route;
+        }
     }
     // ------------------------------------------------------------------------------------------------
     
@@ -260,4 +320,3 @@ namespace Tmpl8
 
         return false;
     }
-}
