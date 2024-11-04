@@ -293,57 +293,6 @@ void Game::update(float deltaTime)
 {
     //Calculate the route to the destination for each tank using BFS
     //Initializing routes here so it gets counted for performance..
-    //calc_tank_route();
-    //
-    ////Check tank collision and nudge tanks away from each other
-    //check_tank_collision();
-
-    ////Update tanks
-    //update_tanks();
-
-    ////Update smoke plumes
-    //for (Smoke& smoke : smokes)
-    //{
-    //    smoke.tick();
-    //}
-
-    ////Calculate "forcefield" around active tanks
-    //forcefield_hull.clear();
-
-    ////Find first active tank (this loop is a bit disgusting, fix?)
-    //int first_active;
-    //vec2 point_on_hull = find_first_active_tank(first_active);
-
-    ////Find left most tank position
-    //find_left_most_tank(point_on_hull);
-
-    ////Calculate convex hull for 'rocket barrier'
-    //calculate_convex_hull(point_on_hull, first_active);
-
-    ////Update rockets
-    //update_rockets();
-    //
-
-    ////Disable rockets if they collide with the "forcefield"
-    //disable_outofbounds_rockets();
-    //
-    ////Remove exploded rockets with remove erase idiom
-    //rockets.erase(std::remove_if(rockets.begin(), rockets.end(), [](const Rocket& rocket) { return !rocket.active; }), rockets.end());
-
-    ////Update particle beams
-    //update_particle_beam();
-    //
-
-    ////Update explosion sprites and remove when done with remove erase idiom
-    //for (Explosion& explosion : explosions)
-    //{
-    //    explosion.tick();
-    //}
-
-    //explosions.erase(std::remove_if(explosions.begin(), explosions.end(), [](const Explosion& explosion) { return explosion.done(); }), explosions.end());
-    //code without separation----------------------------------------------------------------------------------------------------------------:
-    //Calculate the route to the destination for each tank using BFS
-    //Initializing routes here so it gets counted for performance..
     calc_tank_route();
 
     //Check tank collision and nudge tanks away from each other
