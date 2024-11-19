@@ -1,7 +1,7 @@
 #include "precomp.h" // include (only) this in every .cpp file
 #include <iostream>
-constexpr auto num_tanks_blue = 500; //2048
-constexpr auto num_tanks_red = 1;
+constexpr auto num_tanks_blue = 2048; //2048
+constexpr auto num_tanks_red = 2048;
 
 constexpr auto tank_max_health = 1000;
 constexpr auto rocket_hit_value = 60;
@@ -50,6 +50,13 @@ void Game::init()
 {
     frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
 
+    //grid
+    const int cell_size = 128;
+    const int height = 720;
+    const int width = 1280;
+    m_grid = std::make_unique<Grid>(width, height, cell_size);
+
+
     tanks.reserve(num_tanks_blue + num_tanks_red);
 
     uint max_rows = 24;
@@ -67,12 +74,16 @@ void Game::init()
     {
         vec2 position{ start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+        //add tank to grid
+        //m_grid->addTank(&tanks.back());
     }
     //Spawn red tanks
     for (int i = 0; i < num_tanks_red; i++)
     {
         vec2 position{ start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
+        //add tank to grid
+        //m_grid->addTank(&tanks.back());
     }
 
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
@@ -86,6 +97,8 @@ void Game::init()
 void Game::shutdown()
 {
 }
+
+
 
 // -----------------------------------------------------------
 // Iterates through all tanks and returns the closest enemy tank for the given tank
@@ -533,7 +546,7 @@ void Game::tick(float deltaTime)
 
     //Print frame count
     frame_count++;
-    std::cout << std::to_string(frame_count) << std::endl;
+    //std::cout << std::to_string(frame_count) << std::endl;
     string frame_count_string = "FRAME: " + std::to_string(frame_count);
     frame_count_font->print(screen, frame_count_string.c_str(), 350, 580);
 }

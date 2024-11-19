@@ -55,8 +55,9 @@ class Game
 
   private:
     Surface* screen;
+    std::unique_ptr<Grid> m_grid; //spatial partioning
 
-    vector<Tank> tanks;
+    vector<Tank> tanks; //maybe need to be pointers for sptial partioning
     vector<Rocket> rockets;
     vector<Smoke> smokes;
     vector<Explosion> explosions;

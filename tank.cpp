@@ -14,7 +14,8 @@ Tank::Tank(
     float tar_y,
     float collision_radius,
     int health,
-    float max_speed)
+    float max_speed
+    )
     : position(pos_x, pos_y),
       allignment(allignment),
       target(tar_x, tar_y),

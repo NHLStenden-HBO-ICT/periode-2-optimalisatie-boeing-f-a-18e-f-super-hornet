@@ -50,6 +50,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include <memory>
 
 #include <deque>
 #include <queue>
@@ -91,5 +92,6 @@ using namespace Tmpl8;
 #include "particle_beam.h"
 
 #include "game.h"
+#include "grid.h"
 
 // clang-format on

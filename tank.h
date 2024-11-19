@@ -3,6 +3,7 @@
 namespace Tmpl8
 {
     class Terrain; //forward declare
+    class Grid;
 
 enum allignments
 {
