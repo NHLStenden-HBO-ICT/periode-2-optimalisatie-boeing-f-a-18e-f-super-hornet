@@ -4,6 +4,7 @@ namespace Tmpl8
 {
     class Terrain; //forward declare
     class Grid;
+    class Cell;
 
 enum allignments
 {
@@ -39,7 +40,8 @@ class Tank
     vec2 position;
     vec2 speed;
     vec2 target;
-
+    Cell* owner_cell = nullptr;
+    int cell_vector_index = -1;
     vector<vec2> current_route;
 
     int health;

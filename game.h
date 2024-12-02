@@ -21,7 +21,7 @@ class Game
     void draw_health_bars(const std::vector<const Tank*>& sorted_tanks, const int team);
     void measure_performance();
 
-
+    void Game::update_grid();
     void calc_tank_route();
     void check_tank_collision();
     void update_tanks();

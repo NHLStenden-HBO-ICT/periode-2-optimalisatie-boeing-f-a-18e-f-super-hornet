@@ -75,7 +75,7 @@ void Game::init()
         vec2 position{ start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
         //add tank to grid
-        //m_grid->addTank(&tanks.back());
+        m_grid->addTank(&tanks.back());
     }
     //Spawn red tanks
     for (int i = 0; i < num_tanks_red; i++)
@@ -83,7 +83,7 @@ void Game::init()
         vec2 position{ start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
         //add tank to grid
-        //m_grid->addTank(&tanks.back());
+        m_grid->addTank(&tanks.back());
     }
 
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
@@ -295,8 +295,19 @@ void Game::update_particle_beam() {
         }
     }
 }
+void Game::update_grid() {
+    for (Tank& tank : tanks) {
+        //check if tank moved
+        Cell* newCell = m_grid->getCell(tank.position);
+        if (newCell != tank.owner_cell) {
+            //change owner cell
+
+        }
+    }
+}
 // -----------------------------------------------------------
 // Update the game state:
+// update grid positions
 // Move all objects
 // Update sprite frames
 // Collision detection
