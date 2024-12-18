@@ -51,7 +51,7 @@ void Game::init()
     frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
 
     //grid
-    const int cell_size = 128;
+    const int cell_size = 32;
     const int height = 720;
     const int width = 1280;
     m_grid = std::make_unique<Grid>(width, height, cell_size);
@@ -89,6 +89,7 @@ void Game::init()
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
     particle_beams.push_back(Particle_beam(vec2(64, 64), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
     particle_beams.push_back(Particle_beam(vec2(1200, 600), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
+    
 }
 
 // -----------------------------------------------------------
@@ -171,6 +172,67 @@ void Game::check_tank_collision() {
 //                         these 2 buggers above seem to be taking up pretty much all the computation time, making them the priority
 //                         cause 1: BFS instead of A*, cause 2: *investigating*
 //----------------------------------------------------------------------------------------------------------------------------------------------------
+void Game::update_tank_collision(Grid* grid) {
+    for (int i = 0; i < grid->m_cells.size(); i++) {
+        int x = i % grid->m_numXCells;
+        int y = i / grid->m_numXCells;
+
+        Cell& cell = grid->m_cells[i];
+
+        for (int j = 0; j < tanks.size(); j++) { //loop through the tanks in a given cell
+            if (j >= cell.tanks.size()) break; // Safe guard to ensure j is in range
+            Tank* tank = cell.tanks[j];
+            //std::cout << "checking " << j << std::endl;
+            //std::cout << "size " << cell.tanks.size() << std::endl;
+            check_tank_collision_grid(tank, cell.tanks, j+1);
+            //std::cout << "succesfully got " << j << std::endl;
+            if (x > 0) {
+                // Left
+                check_tank_collision_grid(tank, grid->getCell(x - 1, y)->tanks, 0);
+                if (y > 0) {
+                    /// Top left
+                    check_tank_collision_grid(tank, grid->getCell(x - 1, y - 1)->tanks, 0);
+                }
+                if (y < grid->m_numYCells - 1) {
+                    // Bottom left
+                    check_tank_collision_grid(tank, grid->getCell(x - 1, y + 1)->tanks, 0);
+                }
+            }
+            // Up cell
+            if (y > 0) {
+                check_tank_collision_grid(tank, grid->getCell(x, y - 1)->tanks, 0);
+            }
+        }
+    }
+}    
+void Game::check_tank_collision_grid(Tank* tank, std::vector<Tank*>& tanks_to_check, int starting_index) {
+    for (int i = starting_index;i < tanks_to_check.size();i++) {
+        //std::cout << "col checking for " << i << " " << tanks_to_check.size() << std::endl;
+        
+        check_tank_collison_compare_two_tanks(*tank, *tanks_to_check[i]);
+        //std::cout << "col succesfully got " << i << std::endl;
+    } 
+}
+
+void Game::check_tank_collison_compare_two_tanks(Tank& tank1, Tank& tank2) {
+    // Skip if either tank is inactive
+    if (!tank1.active || !tank2.active) return;
+
+    // Calculate the direction vector between the two tanks
+    vec2 dir = tank1.get_position() - tank2.get_position();
+    float dir_squared_len = dir.sqr_length();
+
+    // Calculate the squared sum of their collision radii
+    float col_squared_len = (tank1.get_collision_radius() + tank2.get_collision_radius());
+    col_squared_len *= col_squared_len;
+
+    // Check if the tanks are colliding
+    if (dir_squared_len < col_squared_len) {
+        // Resolve the collision by pushing tank1 away from tank2
+        tank1.push(dir.normalized(), 1.f);
+    }
+}
+
 void Game::update_tanks() {
     for (Tank& tank : tanks)
     {
@@ -260,6 +322,7 @@ void Game::update_rockets() {
         }
     }
 }
+
 void Game::disable_outofbounds_rockets() {
     //Hint: A point to convex hull intersection test might be better here? :) (Disable if outside)
     for (Rocket& rocket : rockets)
@@ -296,12 +359,14 @@ void Game::update_particle_beam() {
     }
 }
 void Game::update_grid() {
-    for (Tank& tank : tanks) {
+    for (size_t i = 0; i < tanks.size(); i++) {
+        Tank& tank = tanks[i];
         //check if tank moved
         Cell* newCell = m_grid->getCell(tank.position);
         if (newCell != tank.owner_cell) {
             //change owner cell
-
+            m_grid->remove_tank_from_cell(&tanks[i]);
+            m_grid->addTank(&tanks[i],newCell);
         }
     }
 }
@@ -320,8 +385,8 @@ void Game::update(float deltaTime)
     calc_tank_route();
 
     //Check tank collision and nudge tanks away from each other
-    check_tank_collision();
-
+    //check_tank_collision();
+    update_tank_collision(m_grid.get());
     //Update tanks
     update_tanks();
 

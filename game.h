@@ -21,9 +21,12 @@ class Game
     void draw_health_bars(const std::vector<const Tank*>& sorted_tanks, const int team);
     void measure_performance();
 
-    void Game::update_grid();
+    void update_grid();
     void calc_tank_route();
     void check_tank_collision();
+    void update_tank_collision(Grid* grid);
+    void check_tank_collision_grid(Tank* tank, std::vector<Tank*>& tanks_to_check, int starting_index);//start at specific index
+    void check_tank_collison_compare_two_tanks(Tank& tank1, Tank& tank2);
     void update_tanks();
     vec2 find_first_active_tank(int& first_active);
     Tank& find_closest_enemy(Tank& current_tank);

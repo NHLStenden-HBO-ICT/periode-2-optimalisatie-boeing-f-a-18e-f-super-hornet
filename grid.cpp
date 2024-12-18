@@ -23,6 +23,12 @@ void Grid::addTank(Tank* tank) {
     tank->cell_vector_index = cell->tanks.size() - 1;
 } 
 
+void Grid::addTank(Tank* tank, Cell* cell) {
+    cell->tanks.push_back(tank);
+    tank->owner_cell = cell;
+    tank->cell_vector_index = cell->tanks.size() - 1;
+}
+
 Cell* Grid::getCell(int x, int y) {
     if (x < 0) x = 0;
     if (x >= m_numXCells) x = m_numXCells - 1; 
@@ -40,6 +46,13 @@ Cell* Grid::getCell(vec2& pos) {
 }
 
 void Grid::remove_tank_from_cell(Tank* tank) {
-    std::vector<Tank*>& tank = tank->owner_cell->tanks;
+    std::vector<Tank*>& tanks = tank->owner_cell->tanks;
+
     tank->owner_cell->tanks[tank->cell_vector_index] = tank->owner_cell->tanks.back();
+    tanks.pop_back();
+    if (tank->cell_vector_index < tanks.size()) {
+        tanks[tank->cell_vector_index]->cell_vector_index = tank->cell_vector_index;
+    }
+    tank->cell_vector_index = -1;
+    tank->owner_cell = nullptr;
 }

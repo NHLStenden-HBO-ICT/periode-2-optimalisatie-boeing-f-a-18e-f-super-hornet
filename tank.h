@@ -4,7 +4,7 @@ namespace Tmpl8
 {
     class Terrain; //forward declare
     class Grid;
-    class Cell;
+    struct Cell;
 
 enum allignments
 {
