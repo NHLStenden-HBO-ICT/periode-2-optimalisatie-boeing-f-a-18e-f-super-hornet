@@ -25,6 +25,9 @@ class Rocket
 
     int current_frame;
     Sprite* rocket_sprite;
+
+    Cell* owner_cell = nullptr;
+    int cell_vector_index = -1;
 };
 
 } // namespace Tmpl8

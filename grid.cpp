@@ -16,17 +16,54 @@ Grid::~Grid() {
     // Destructor body
 }
 
-void Grid::addTank(Tank* tank) {
+void Grid::add_tank(Tank* tank) {
     Cell* cell = getCell(tank->position);
     cell->tanks.push_back(tank);
     tank->owner_cell = cell;
     tank->cell_vector_index = cell->tanks.size() - 1;
 } 
 
-void Grid::addTank(Tank* tank, Cell* cell) {
+void Grid::add_tank(Tank* tank, Cell* cell) {
     cell->tanks.push_back(tank);
     tank->owner_cell = cell;
     tank->cell_vector_index = cell->tanks.size() - 1;
+}
+void Grid::remove_tank_from_cell(Tank* tank) {
+    std::vector<Tank*>& tanks = tank->owner_cell->tanks;
+
+    tank->owner_cell->tanks[tank->cell_vector_index] = tank->owner_cell->tanks.back();
+    tanks.pop_back();
+    if (tank->cell_vector_index < tanks.size()) {
+        tanks[tank->cell_vector_index]->cell_vector_index = tank->cell_vector_index;
+    }
+    tank->cell_vector_index = -1;
+    tank->owner_cell = nullptr;
+}
+
+
+void Grid::add_rocket(Rocket* rocket) {
+    Cell* cell = getCell(rocket->position);
+    cell->rockets.push_back(rocket);
+    rocket->owner_cell = cell;
+    rocket->cell_vector_index = cell->rockets.size() - 1;
+}
+
+void Grid::add_rocket(Rocket* rocket, Cell* cell) {
+    cell->rockets.push_back(rocket);
+    rocket->owner_cell = cell;
+    rocket->cell_vector_index = cell->rockets.size() - 1;
+}
+void Grid::remove_rocket_from_cell(Rocket* rocket) {
+    std::vector<Rocket*>& rockets = rocket->owner_cell->rockets;
+    std::cout << "yay1\n";
+    rocket->owner_cell->rockets[rocket->cell_vector_index] = rocket->owner_cell->rockets.back(); //this line breaks due to memory access problems
+    std::cout << "yay2\n";
+    rockets.pop_back();
+    if (rocket->cell_vector_index < rockets.size()) {
+        rockets[rocket->cell_vector_index]->cell_vector_index = rocket->cell_vector_index;
+    }
+    rocket->cell_vector_index = -1;
+    rocket->owner_cell = nullptr;
 }
 
 Cell* Grid::getCell(int x, int y) {
@@ -45,14 +82,3 @@ Cell* Grid::getCell(vec2& pos) {
     return getCell(cellX, cellY);
 }
 
-void Grid::remove_tank_from_cell(Tank* tank) {
-    std::vector<Tank*>& tanks = tank->owner_cell->tanks;
-
-    tank->owner_cell->tanks[tank->cell_vector_index] = tank->owner_cell->tanks.back();
-    tanks.pop_back();
-    if (tank->cell_vector_index < tanks.size()) {
-        tanks[tank->cell_vector_index]->cell_vector_index = tank->cell_vector_index;
-    }
-    tank->cell_vector_index = -1;
-    tank->owner_cell = nullptr;
-}

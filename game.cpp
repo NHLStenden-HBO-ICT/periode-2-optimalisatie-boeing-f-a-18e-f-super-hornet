@@ -75,7 +75,7 @@ void Game::init()
         vec2 position{ start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
         //add tank to grid
-        m_grid->addTank(&tanks.back());
+        m_grid->add_tank(&tanks.back());
     }
     //Spawn red tanks
     for (int i = 0; i < num_tanks_red; i++)
@@ -83,7 +83,7 @@ void Game::init()
         vec2 position{ start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
         //add tank to grid
-        m_grid->addTank(&tanks.back());
+        m_grid->add_tank(&tanks.back());
     }
 
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
@@ -144,7 +144,7 @@ void Game::calc_tank_route(){
     }
 }
 
-
+// not currently in use because dumb dumb hyperinefficient
 void Game::check_tank_collision() {
     for (Tank& tank : tanks)
     {
@@ -233,6 +233,87 @@ void Game::check_tank_collison_compare_two_tanks(Tank& tank1, Tank& tank2) {
     }
 }
 
+void Game::update_rockets(Grid* grid) {
+    for (int i = 0; i < grid->m_cells.size(); i++) {
+        int x = i % grid->m_numXCells;
+        int y = i / grid->m_numXCells;
+        
+        Cell& cell = grid->m_cells[i];
+
+        // Check collisions for rockets in the current cell
+        for (int j = 0; j < cell.rockets.size(); j++) {
+            Rocket* rocket = cell.rockets[j];
+            rocket->tick();
+
+            // Check collision with tanks in the same cell
+            check_rocket_collision_grid(rocket, cell.tanks);
+
+            // Check collision with tanks in neighboring cells
+            if (x > 0) {
+                // Left
+                check_rocket_collision_grid(rocket, grid->getCell(x - 1, y)->tanks);
+                if (y > 0) {
+                    // Top left
+                    check_rocket_collision_grid(rocket, grid->getCell(x - 1, y - 1)->tanks);
+                }
+                if (y < grid->m_numYCells - 1) {
+                    // Bottom left
+                    check_rocket_collision_grid(rocket, grid->getCell(x - 1, y + 1)->tanks);
+                }
+            }
+            // Above
+            if (y > 0) {
+                check_rocket_collision_grid(rocket, grid->getCell(x, y - 1)->tanks);
+            }
+            // Below
+            if (y < grid->m_numYCells - 1) {
+                check_rocket_collision_grid(rocket, grid->getCell(x, y + 1)->tanks);
+            }
+            // Right
+            if (x < grid->m_numXCells - 1) {
+                check_rocket_collision_grid(rocket, grid->getCell(x + 1, y)->tanks);
+                if (y > 0) {
+                    // Top right
+                    check_rocket_collision_grid(rocket, grid->getCell(x + 1, y - 1)->tanks);
+                }
+                if (y < grid->m_numYCells - 1) {
+                    // Bottom right
+                    check_rocket_collision_grid(rocket, grid->getCell(x + 1, y + 1)->tanks);
+                }
+            }
+
+            // Remove the rocket if it's inactive (e.g., due to collision or moving out of bounds)
+            if (!rocket->active) {
+                std::cout << "test1\n";
+                grid->remove_rocket_from_cell(rocket);
+                std::cout << "test2\n";
+            }
+        }
+    }
+}
+void Game::check_rocket_collision_grid(Rocket* rocket, std::vector<Tank*>& tanks_to_check) {
+    for (Tank* tank : tanks_to_check) {
+        if (!tank->active || tank->allignment != rocket->allignment) {
+
+
+            // Check if the rocket intersects the tank
+            if (rocket->intersects(tank->position, tank->collision_radius)) {
+                // Spawn explosion
+                explosions.push_back(Explosion(&explosion, tank->position));
+
+                // Damage the tank, spawn smoke if destroyed
+                if (tank->hit(rocket_hit_value)) {
+                    smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
+                }
+
+                // Deactivate the rocket
+                rocket->active = false;
+                break;
+            }
+        }
+    }
+}
+
 void Game::update_tanks() {
     for (Tank& tank : tanks)
     {
@@ -247,11 +328,16 @@ void Game::update_tanks() {
                 Tank& target = find_closest_enemy(tank);
 
                 rockets.push_back(Rocket(tank.position, (target.get_position() - tank.position).normalized() * 3, rocket_radius, tank.allignment, ((tank.allignment == RED) ? &rocket_red : &rocket_blue)));
-
+                //add tank to grid
+               
+                m_grid->add_rocket(&rockets.back());
+                //std::cout << rockets.size() << "\n";
+                   
                 tank.reload_rocket();
             }
         }
     }
+    std::cout << "tanks update succes\n";
 }
 
 //notes and changes:
@@ -299,29 +385,7 @@ void Game::calculate_convex_hull(vec2 point_on_hull,int first_active) {
         }
     }
 }
-void Game::update_rockets() {
-    for (Rocket& rocket : rockets)
-    {
-        rocket.tick();
 
-        //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
-        for (Tank& tank : tanks)
-        {
-            if (tank.active && (tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
-            {
-                explosions.push_back(Explosion(&explosion, tank.position));
-
-                if (tank.hit(rocket_hit_value))
-                {
-                    smokes.push_back(Smoke(smoke, tank.position - vec2(7, 24)));
-                }
-
-                rocket.active = false;
-                break;
-            }
-        }
-    }
-}
 
 void Game::disable_outofbounds_rockets() {
     //Hint: A point to convex hull intersection test might be better here? :) (Disable if outside)
@@ -366,7 +430,7 @@ void Game::update_grid() {
         if (newCell != tank.owner_cell) {
             //change owner cell
             m_grid->remove_tank_from_cell(&tanks[i]);
-            m_grid->addTank(&tanks[i],newCell);
+            m_grid->add_tank(&tanks[i],newCell);
         }
     }
 }
@@ -420,7 +484,7 @@ void Game::update(float deltaTime)
     calculate_convex_hull(point_on_hull, first_active);
 
         //Update rockets
-     update_rockets();
+     update_rockets(m_grid.get());
  
 
      //Disable rockets if they collide with the "forcefield"

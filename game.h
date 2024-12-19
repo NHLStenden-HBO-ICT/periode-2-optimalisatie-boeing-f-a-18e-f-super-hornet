@@ -27,11 +27,15 @@ class Game
     void update_tank_collision(Grid* grid);
     void check_tank_collision_grid(Tank* tank, std::vector<Tank*>& tanks_to_check, int starting_index);//start at specific index
     void check_tank_collison_compare_two_tanks(Tank& tank1, Tank& tank2);
+
+    void check_rocket_collision_grid(Rocket* rocket, std::vector<Tank*>& tanks_to_check);
+    void update_rockets(Grid* grid);
+
     void update_tanks();
     vec2 find_first_active_tank(int& first_active);
     Tank& find_closest_enemy(Tank& current_tank);
     void calculate_convex_hull(vec2 point_on_hull, int first_active);
-    void update_rockets();
+    //void update_rockets();
     void disable_outofbounds_rockets();
     void update_particle_beam();
 
