@@ -1,7 +1,7 @@
 #include "precomp.h" // include (only) this in every .cpp file
 #include <iostream>
-constexpr auto num_tanks_blue = 2048; //2048
-constexpr auto num_tanks_red = 2048;
+constexpr auto num_tanks_blue = 100; //2048
+constexpr auto num_tanks_red = 100;
 
 constexpr auto tank_max_health = 1000;
 constexpr auto rocket_hit_value = 60;
@@ -299,6 +299,61 @@ void Game::calculate_convex_hull(vec2 point_on_hull,int first_active) {
         }
     }
 }
+//-----------------------------------------------------------
+void Game::update_rockets_grid(Grid* grid) {
+    for (Rocket& rocket : rockets)
+    {
+        rocket.tick();
+
+        for (Tank tank : tanks) {
+            if (frame_count > 290){
+                std::cout << "------------\nrocket position: " << rocket.position[0] << " " << rocket.position[0] << "\ntank position: " << tank.position[0] << " " << tank.position[1];
+            }
+        }
+
+        Cell* current_cell = grid->getCell(rocket.position);
+
+        for (Tank *tank : current_cell->tanks) {
+            /*if (rand() % 1001 == 1) {
+                std::cout << "------------\nrocket position: " << rocket.position[0] << " " << rocket.position[0] << "\ntank position: " << tank->position[0]<<" "<< tank->position[1];
+            }*/
+            if (tank->active && (tank->allignment != rocket.allignment) && rocket.intersects(tank->position, tank->collision_radius))
+            {
+                explosions.push_back(Explosion(&explosion, tank->position));
+
+                if (tank->hit(rocket_hit_value))
+                {
+                    smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
+                }
+
+                rocket.active = false;
+                break;
+            }
+        }
+
+
+        //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
+        /*for (Tank& tank : tanks)
+        {
+            if (tank.active && (tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
+            {
+                explosions.push_back(Explosion(&explosion, tank.position));
+
+                if (tank.hit(rocket_hit_value))
+                {
+                    smokes.push_back(Smoke(smoke, tank.position - vec2(7, 24)));
+                }
+
+                rocket.active = false;
+                break;
+            }
+        }*/
+    }
+}
+//------------------------------------------------------------
+
+
+
 void Game::update_rockets() {
     for (Rocket& rocket : rockets)
     {
@@ -361,15 +416,26 @@ void Game::update_particle_beam() {
 void Game::update_grid() {
     for (size_t i = 0; i < tanks.size(); i++) {
         Tank& tank = tanks[i];
-        //check if tank moved
+
+        // Get the new cell based on the tank's current position
         Cell* newCell = m_grid->getCell(tank.position);
+
+        // Check if the tank has moved to a different cell
         if (newCell != tank.owner_cell) {
-            //change owner cell
-            m_grid->remove_tank_from_cell(&tanks[i]);
-            m_grid->addTank(&tanks[i],newCell);
+            // Remove the tank from its old cell
+            if (tank.owner_cell) {
+                m_grid->remove_tank_from_cell(&tank);
+            }
+
+            // Add the tank to the new cell
+            m_grid->addTank(&tank, newCell);
+
+            // Update the tank's owner cell to the new cell
+            tank.owner_cell = newCell;
         }
     }
 }
+
 // -----------------------------------------------------------
 // Update the game state:
 // update grid positions
@@ -420,7 +486,7 @@ void Game::update(float deltaTime)
     calculate_convex_hull(point_on_hull, first_active);
 
         //Update rockets
-     update_rockets();
+    update_rockets_grid(m_grid.get());
  
 
      //Disable rockets if they collide with the "forcefield"

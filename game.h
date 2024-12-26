@@ -32,6 +32,10 @@ class Game
     Tank& find_closest_enemy(Tank& current_tank);
     void calculate_convex_hull(vec2 point_on_hull, int first_active);
     void update_rockets();
+    void update_rockets_grid(Grid* grid);
+    
+
+
     void disable_outofbounds_rockets();
     void update_particle_beam();
 
