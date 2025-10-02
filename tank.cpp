@@ -89,7 +89,7 @@ void Tank::set_route(const std::vector<vec2>& route)
 void Tank::reload_rocket()
 {
     reloaded = false;
-    reload_time = 2000.0f;
+    reload_time = 200.0f;
 }
 
 void Tank::deactivate()

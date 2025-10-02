@@ -1,7 +1,7 @@
 #include "precomp.h" // include (only) this in every .cpp file
 #include <iostream>
-constexpr auto num_tanks_blue = 100; //2048
-constexpr auto num_tanks_red = 100;
+constexpr auto num_tanks_blue = 2048; //2048
+constexpr auto num_tanks_red = 2048;
 
 constexpr auto tank_max_health = 1000;
 constexpr auto rocket_hit_value = 60;
@@ -304,52 +304,51 @@ void Game::update_rockets_grid(Grid* grid) {
     for (Rocket& rocket : rockets)
     {
         rocket.tick();
+        if (!rocket.active) continue;
 
-        for (Tank tank : tanks) {
-            if (frame_count > 290){
-                std::cout << "------------\nrocket position: " << rocket.position[0] << " " << rocket.position[0] << "\ntank position: " << tank.position[0] << " " << tank.position[1];
-            }
-        }
+        // Compute the rocket’s cell indices directly
+        int cellX = (int)(rocket.position.x / grid->m_cellSize);
+        int cellY = (int)(rocket.position.y / grid->m_cellSize);
 
-        Cell* current_cell = grid->getCell(rocket.position);
+        bool hit = false;
 
-        for (Tank *tank : current_cell->tanks) {
-            /*if (rand() % 1001 == 1) {
-                std::cout << "------------\nrocket position: " << rocket.position[0] << " " << rocket.position[0] << "\ntank position: " << tank->position[0]<<" "<< tank->position[1];
-            }*/
-            if (tank->active && (tank->allignment != rocket.allignment) && rocket.intersects(tank->position, tank->collision_radius))
-            {
-                explosions.push_back(Explosion(&explosion, tank->position));
+        // Scan current cell + 8 neighbors
+        for (int dx = -1; dx <= 1 && !hit; dx++) {
+            for (int dy = -1; dy <= 1 && !hit; dy++) {
+                int nx = cellX + dx;
+                int ny = cellY + dy;
 
-                if (tank->hit(rocket_hit_value))
-                {
-                    smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
+                // Bounds check
+                if (nx < 0 || nx >= grid->m_numXCells ||
+                    ny < 0 || ny >= grid->m_numYCells) {
+                    continue;
                 }
 
-                rocket.active = false;
-                break;
+                // Get neighbor cell
+                Cell* cell = grid->getCell(nx, ny);
+
+                // Check all tanks in this cell
+                for (Tank* tank : cell->tanks) {
+                    if (tank->active &&
+                        (tank->allignment != rocket.allignment) &&
+                        rocket.intersects(tank->position, tank->collision_radius))
+                    {
+                        explosions.push_back(Explosion(&explosion, tank->position));
+
+                        if (tank->hit(rocket_hit_value)) {
+                            smokes.push_back(Smoke(smoke, tank->position - vec2(7, 24)));
+                        }
+
+                        rocket.active = false;
+                        hit = true;
+                        break;
+                    }
+                }
             }
         }
-
-
-        //Check if rocket collides with enemy tank, spawn explosion, and if tank is destroyed spawn a smoke plume
-        /*for (Tank& tank : tanks)
-        {
-            if (tank.active && (tank.allignment != rocket.allignment) && rocket.intersects(tank.position, tank.collision_radius))
-            {
-                explosions.push_back(Explosion(&explosion, tank.position));
-
-                if (tank.hit(rocket_hit_value))
-                {
-                    smokes.push_back(Smoke(smoke, tank.position - vec2(7, 24)));
-                }
-
-                rocket.active = false;
-                break;
-            }
-        }*/
     }
 }
+
 //------------------------------------------------------------
 
 
@@ -455,7 +454,7 @@ void Game::update(float deltaTime)
     update_tank_collision(m_grid.get());
     //Update tanks
     update_tanks();
-
+    update_grid();
     //Update smoke plumes
     for (Smoke& smoke : smokes)
     {
@@ -487,7 +486,7 @@ void Game::update(float deltaTime)
 
         //Update rockets
     update_rockets_grid(m_grid.get());
- 
+    //update_rockets();
 
      //Disable rockets if they collide with the "forcefield"
      disable_outofbounds_rockets();
