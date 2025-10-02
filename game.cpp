@@ -14,7 +14,8 @@ constexpr auto health_bar_width = 70;
 constexpr auto max_frames = 2000;
 
 //Global performance timer
-constexpr auto REF_PERFORMANCE = 404074; //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames)
+constexpr auto REF_PERFORMANCE = 606798; //UPDATE THIS WITH YOUR REFERENCE PERFORMANCE (see console after 2k frames) MEASURED ON LAPTOP WITHOUT CHARGER 
+//81755.2 measured on 02-10-2025 after optimizing tanks and rockets collision
 static timer perf_timer;
 static float duration;
 
@@ -51,7 +52,7 @@ void Game::init()
     frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
 
     //grid
-    const int cell_size = 32;
+    const int cell_size = 20;
     const int height = 720;
     const int width = 1280;
     m_grid = std::make_unique<Grid>(width, height, cell_size);
