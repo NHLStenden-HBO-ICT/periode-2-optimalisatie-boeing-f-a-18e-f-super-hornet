@@ -95,38 +95,37 @@ namespace Tmpl8
 
     void Terrain::draw(Surface* target) const
     {
+        const int offset = HEALTHBAR_OFFSET;
+        const int s = sprite_size;
 
-        for (size_t y = 0; y < tiles.size(); y++)
+        for (size_t y = 0; y < tiles.size(); ++y)
         {
-            for (size_t x = 0; x < tiles.at(y).size(); x++)
-            {
-                int posX = (x * sprite_size) + HEALTHBAR_OFFSET;
-                int posY = y * sprite_size;
+            const int posY = static_cast<int>(y) * s;
+            const auto& row = tiles[y];
 
-                switch (tiles.at(y).at(x).tile_type)
+            for (size_t x = 0; x < row.size(); ++x)
+            {
+                const int posX = static_cast<int>(x) * s + offset;
+                const TerrainTile& tile = row[x];
+
+                Sprite* sprite = nullptr;  // ?? not const anymore!
+
+                switch (tile.tile_type)
                 {
-                case TileType::GRASS:
-                    tile_grass->draw(target, posX, posY);
-                    break;
-                case TileType::FORREST:
-                    tile_forest->draw(target, posX, posY);
-                    break;
-                case TileType::ROCKS:
-                    tile_rocks->draw(target, posX, posY);
-                    break;
-                case TileType::MOUNTAINS:
-                    tile_mountains->draw(target, posX, posY);
-                    break;
-                case TileType::WATER:
-                    tile_water->draw(target, posX, posY);
-                    break;
-                default:
-                    tile_grass->draw(target, posX, posY);
-                    break;
+                case TileType::GRASS:      sprite = tile_grass.get();     break;
+                case TileType::FORREST:    sprite = tile_forest.get();    break;
+                case TileType::ROCKS:      sprite = tile_rocks.get();     break;
+                case TileType::MOUNTAINS:  sprite = tile_mountains.get(); break;
+                case TileType::WATER:      sprite = tile_water.get();     break;
+                default:                   sprite = tile_grass.get();     break;
                 }
+
+                if (sprite)
+                    sprite->draw(target, posX, posY);
             }
         }
     }
+
     //greedy testing
     // ------------------------------------------------------------------------------------------------
     // A helper structure for comparison in priority queue (min-heap)
