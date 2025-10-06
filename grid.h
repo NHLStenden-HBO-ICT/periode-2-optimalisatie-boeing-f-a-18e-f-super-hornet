@@ -10,10 +10,10 @@ namespace Tmpl8
 		Grid(int width, int height, int cellSize);
 		~Grid();
 
-		void addTank(Tank* tank);// add tank to cell and compute what cell contains it
-		void addTank(Tank* tank,Cell* cell);// add tank but we already know where it is
-		Cell* getCell(int x, int y);
-		Cell* getCell(vec2& pos);
+		void add_tank(Tank* tank);// add tank to cell and compute what cell contains it
+		void add_tank(Tank* tank,Cell* cell);// add tank but we already know where it is
+		Cell* get_cell(int x, int y);
+		Cell* get_cell(vec2& pos);
 		void remove_tank_from_cell(Tank* tank);
 	private:
 		std::vector<Cell> m_cells;

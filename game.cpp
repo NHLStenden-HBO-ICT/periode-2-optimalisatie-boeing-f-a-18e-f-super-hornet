@@ -76,7 +76,7 @@ void Game::init()
         vec2 position{ start_blue_x + ((i % max_rows) * spacing), start_blue_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, BLUE, &tank_blue, &smoke, 1100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
         //add tank to grid
-        m_grid->addTank(&tanks.back());
+        m_grid->add_tank(&tanks.back());
     }
     //Spawn red tanks
     for (int i = 0; i < num_tanks_red; i++)
@@ -84,7 +84,7 @@ void Game::init()
         vec2 position{ start_red_x + ((i % max_rows) * spacing), start_red_y + ((i / max_rows) * spacing) };
         tanks.push_back(Tank(position.x, position.y, RED, &tank_red, &smoke, 100.f, position.y + 16, tank_radius, tank_max_health, tank_max_speed));
         //add tank to grid
-        m_grid->addTank(&tanks.back());
+        m_grid->add_tank(&tanks.back());
     }
 
     particle_beams.push_back(Particle_beam(vec2(590, 327), vec2(100, 50), &particle_beam_sprite, particle_beam_hit_value));
@@ -189,19 +189,19 @@ void Game::update_tank_collision(Grid* grid) {
             //std::cout << "succesfully got " << j << std::endl;
             if (x > 0) {
                 // Left
-                check_tank_collision_grid(tank, grid->getCell(x - 1, y)->tanks, 0);
+                check_tank_collision_grid(tank, grid->get_cell(x - 1, y)->tanks, 0);
                 if (y > 0) {
                     /// Top left
-                    check_tank_collision_grid(tank, grid->getCell(x - 1, y - 1)->tanks, 0);
+                    check_tank_collision_grid(tank, grid->get_cell(x - 1, y - 1)->tanks, 0);
                 }
                 if (y < grid->m_numYCells - 1) {
                     // Bottom left
-                    check_tank_collision_grid(tank, grid->getCell(x - 1, y + 1)->tanks, 0);
+                    check_tank_collision_grid(tank, grid->get_cell(x - 1, y + 1)->tanks, 0);
                 }
             }
             // Up cell
             if (y > 0) {
-                check_tank_collision_grid(tank, grid->getCell(x, y - 1)->tanks, 0);
+                check_tank_collision_grid(tank, grid->get_cell(x, y - 1)->tanks, 0);
             }
         }
     }
@@ -326,7 +326,7 @@ void Game::update_rockets_grid(Grid* grid) {
                 }
 
                 // Get neighbor cell
-                Cell* cell = grid->getCell(nx, ny);
+                Cell* cell = grid->get_cell(nx, ny);
 
                 // Check all tanks in this cell
                 for (Tank* tank : cell->tanks) {
@@ -418,7 +418,7 @@ void Game::update_grid() {
         Tank& tank = tanks[i];
 
         // Get the new cell based on the tank's current position
-        Cell* newCell = m_grid->getCell(tank.position);
+        Cell* newCell = m_grid->get_cell(tank.position);
 
         // Check if the tank has moved to a different cell
         if (newCell != tank.owner_cell) {
@@ -428,7 +428,7 @@ void Game::update_grid() {
             }
 
             // Add the tank to the new cell
-            m_grid->addTank(&tank, newCell);
+            m_grid->add_tank(&tank, newCell);
 
             // Update the tank's owner cell to the new cell
             tank.owner_cell = newCell;
@@ -565,15 +565,21 @@ void Game::draw()
 
         const int begin = ((t < 1) ? 0 : num_tanks_blue);
         std::vector<const Tank*> sorted_tanks;
-        insertion_sort_tanks_health(tanks, sorted_tanks, begin, begin + NUM_TANKS);
-        sorted_tanks.erase(std::remove_if(sorted_tanks.begin(), sorted_tanks.end(), [](const Tank* tank) { return !tank->active; }), sorted_tanks.end());
+        sorted_tanks.reserve(NUM_TANKS);
+        for (int i = begin; i < begin + NUM_TANKS; ++i)
+            if (tanks[i].active)
+                sorted_tanks.push_back(&tanks[i]);
+
+        std::vector<const Tank*> temp = sorted_tanks; // temp buffer for merge
+        merge_sort_tanks_health(sorted_tanks, temp, 0, sorted_tanks.size());
+
 
         draw_health_bars(sorted_tanks, t);
     }
 }
 
 // -----------------------------------------------------------
-// Sort tanks by health value using insertion sort
+// Sort tanks by health value using insertion sort                         <------ F tier
 // -----------------------------------------------------------
 void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end)
 {
@@ -603,6 +609,34 @@ void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original,
         }
     }
 }
+// -----------------------------------------------------------
+// Sort tanks by health value using merge sort                               <------ goog
+// -----------------------------------------------------------
+void Tmpl8::Game::merge_sort_tanks_health(std::vector<const Tank*>& arr, std::vector<const Tank*>& temp, int left, int right)
+{
+    if (right - left <= 1) return;
+
+    int mid = left + (right - left) / 2;
+    merge_sort_tanks_health(arr, temp, left, mid);
+    merge_sort_tanks_health(arr, temp, mid, right);
+
+    int i = left, j = mid, k = left;
+    while (i < mid && j < right)
+    {
+        if (arr[i]->compare_health(*arr[j]) <= 0)
+            temp[k++] = arr[i++];
+        else
+            temp[k++] = arr[j++];
+    }
+    while (i < mid) temp[k++] = arr[i++];
+    while (j < right) temp[k++] = arr[j++];
+
+    for (int t = left; t < right; ++t)
+        arr[t] = temp[t];
+}
+
+
+
 
 // -----------------------------------------------------------
 // Draw the health bars based on the given tanks health values

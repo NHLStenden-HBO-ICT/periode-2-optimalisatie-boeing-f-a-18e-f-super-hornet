@@ -12,24 +12,22 @@ Grid::Grid(int width, int height, int cellSize):
     }
 
 
-Grid::~Grid() {
-    // Destructor body
-}
+Grid::~Grid() = default;
 
-void Grid::addTank(Tank* tank) {
-    Cell* cell = getCell(tank->position);
+void Grid::add_tank(Tank* tank) {
+    Cell* cell = get_cell(tank->position);
     cell->tanks.push_back(tank);
     tank->owner_cell = cell;
     tank->cell_vector_index = cell->tanks.size() - 1;
 } 
 
-void Grid::addTank(Tank* tank, Cell* cell) {
+void Grid::add_tank(Tank* tank, Cell* cell) {
     cell->tanks.push_back(tank);
     tank->owner_cell = cell;
     tank->cell_vector_index = cell->tanks.size() - 1;
 }
 
-Cell* Grid::getCell(int x, int y) {
+Cell* Grid::get_cell(int x, int y) {
     if (x < 0) x = 0;
     if (x >= m_numXCells) x = m_numXCells - 1; 
     if (y < 0) y = 0;
@@ -38,11 +36,11 @@ Cell* Grid::getCell(int x, int y) {
     return &m_cells[y * m_numXCells + x];
 }
 
-Cell* Grid::getCell(vec2& pos) {
+Cell* Grid::get_cell(vec2& pos) {
     int cellX = (int)(pos.x / m_cellSize);
     int cellY = (int)(pos.y / m_cellSize);
 
-    return getCell(cellX, cellY);
+    return get_cell(cellX, cellY);
 }
 
 void Grid::remove_tank_from_cell(Tank* tank) {
