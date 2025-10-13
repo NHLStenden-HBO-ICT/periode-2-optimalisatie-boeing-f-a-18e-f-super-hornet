@@ -27,6 +27,7 @@ class ThreadPool
         for (size_t i = 0; i < numThreads; ++i)
             workers.push_back(std::thread(Worker(*this)));
     }
+    size_t get_num_threads() const { return workers.size(); }
 
     ~ThreadPool()
     {
@@ -95,5 +96,6 @@ inline void Worker::operator()()
         task();
     }
 }
+
 
 } // namespace Tmpl8

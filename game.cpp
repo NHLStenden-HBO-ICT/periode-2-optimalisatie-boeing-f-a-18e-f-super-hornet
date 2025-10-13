@@ -42,6 +42,8 @@ const static vec2 rocket_size(6, 6);
 const static float tank_radius = 3.f;
 const static float rocket_radius = 5.f;
 
+ThreadPool pool(std::thread::hardware_concurrency());
+
 // -----------------------------------------------------------
 // Initialize the simulation state
 // This function does not count for the performance multiplier
@@ -50,7 +52,6 @@ const static float rocket_radius = 5.f;
 void Game::init()
 {
     frame_count_font = new Font("assets/digital_small.png", "ABCDEFGHIJKLMNOPQRSTUVWXYZ:?!=-0123456789.");
-
     //grid
     const int cell_size = 20;
     const int height = 720;
@@ -173,66 +174,51 @@ void Game::check_tank_collision() {
 //                         these 2 buggers above seem to be taking up pretty much all the computation time, making them the priority
 //                         cause 1: BFS instead of A*, cause 2: *investigating*
 //----------------------------------------------------------------------------------------------------------------------------------------------------
-void Game::update_tank_collision(Grid* grid) {
-    for (int i = 0; i < grid->m_cells.size(); i++) {
+void Game::update_tank_collision(Grid* grid)
+{
+    for (int i = 0; i < grid->m_cells.size(); i++)
+    {
         int x = i % grid->m_numXCells;
         int y = i / grid->m_numXCells;
 
         Cell& cell = grid->m_cells[i];
 
-        for (int j = 0; j < tanks.size(); j++) { //loop through the tanks in a given cell
-            if (j >= cell.tanks.size()) break; // Safe guard to ensure j is in range
-            Tank* tank = cell.tanks[j];
-            //std::cout << "checking " << j << std::endl;
-            //std::cout << "size " << cell.tanks.size() << std::endl;
-            check_tank_collision_grid(tank, cell.tanks, j+1);
-            //std::cout << "succesfully got " << j << std::endl;
-            if (x > 0) {
-                // Left
-                check_tank_collision_grid(tank, grid->get_cell(x - 1, y)->tanks, 0);
-                if (y > 0) {
-                    /// Top left
-                    check_tank_collision_grid(tank, grid->get_cell(x - 1, y - 1)->tanks, 0);
+        for (int j = 0; j < cell.tanks.size(); j++)
+        {
+            Tank* t1 = cell.tanks[j];
+            if (!t1->active) continue;
+
+            // Loop over the 3x3 neighborhood
+            for (int nx = x - 1; nx <= x + 1; nx++)
+            {
+                if (nx < 0 || nx >= grid->m_numXCells) continue;
+
+                for (int ny = y - 1; ny <= y + 1; ny++)
+                {
+                    if (ny < 0 || ny >= grid->m_numYCells) continue;
+
+                    Cell* neighbor = grid->get_cell(nx, ny);
+                    if (!neighbor) continue;
+
+                    // Check collisions with all tanks in this neighbor cell
+                    for (Tank* t2 : neighbor->tanks)
+                    {
+                        // Avoid double-checking same pair
+                        if (!t2->active || (t1 == t2)) continue;
+
+                        vec2 dir = t1->position - t2->position;
+                        float col_dist2 = powf(t1->collision_radius + t2->collision_radius, 2.0f);
+                        if (dir.sqr_length() < col_dist2)
+                        {
+                            t1->push(dir.normalized(), 1.f);
+                        }
+                    }
                 }
-                if (y < grid->m_numYCells - 1) {
-                    // Bottom left
-                    check_tank_collision_grid(tank, grid->get_cell(x - 1, y + 1)->tanks, 0);
-                }
-            }
-            // Up cell
-            if (y > 0) {
-                check_tank_collision_grid(tank, grid->get_cell(x, y - 1)->tanks, 0);
             }
         }
     }
-}    
-void Game::check_tank_collision_grid(Tank* tank, std::vector<Tank*>& tanks_to_check, int starting_index) {
-    for (int i = starting_index;i < tanks_to_check.size();i++) {
-        //std::cout << "col checking for " << i << " " << tanks_to_check.size() << std::endl;
-        
-        check_tank_collison_compare_two_tanks(*tank, *tanks_to_check[i]);
-        //std::cout << "col succesfully got " << i << std::endl;
-    } 
 }
 
-void Game::check_tank_collison_compare_two_tanks(Tank& tank1, Tank& tank2) {
-    // Skip if either tank is inactive
-    if (!tank1.active || !tank2.active) return;
-
-    // Calculate the direction vector between the two tanks
-    vec2 dir = tank1.get_position() - tank2.get_position();
-    float dir_squared_len = dir.sqr_length();
-
-    // Calculate the squared sum of their collision radii
-    float col_squared_len = (tank1.get_collision_radius() + tank2.get_collision_radius());
-    col_squared_len *= col_squared_len;
-
-    // Check if the tanks are colliding
-    if (dir_squared_len < col_squared_len) {
-        // Resolve the collision by pushing tank1 away from tank2
-        tank1.push(dir.normalized(), 1.f);
-    }
-}
 
 void Game::update_tanks() {
     for (Tank& tank : tanks)
@@ -520,6 +506,31 @@ void Game::draw()
     //Draw background
     background_terrain.draw(screen);
 
+    // Start sorting thread before drawing
+    auto future_sort = pool.enqueue([&]() {
+        std::array<std::vector<const Tank*>, 2> result;
+
+        for (int t = 0; t < 2; t++)
+        {
+            const int NUM_TANKS = (t == 0) ? num_tanks_blue : num_tanks_red;
+            const int begin = (t == 0) ? 0 : num_tanks_blue;
+
+            std::vector<const Tank*> sorted;
+            sorted.reserve(NUM_TANKS);
+
+            for (int i = begin; i < begin + NUM_TANKS; ++i)
+                if (tanks[i].active)
+                    sorted.push_back(&tanks[i]);
+
+            std::vector<const Tank*> temp = sorted;
+            merge_sort_tanks_health(sorted, temp, 0, sorted.size());
+            result[t] = std::move(sorted);
+        }
+
+        return result;
+        });
+
+
     //Draw sprites
     for (int i = 0; i < num_tanks_blue + num_tanks_red; i++)
     {
@@ -548,38 +559,23 @@ void Game::draw()
         explosion.draw(screen);
     }
 
-    //Draw forcefield (mostly for debugging, its kinda ugly..)
-    for (size_t i = 0; i < forcefield_hull.size(); i++)
+    //Draw forcefield (mostly for debugging <-- turned it off) 
+    /*for (size_t i = 0; i < forcefield_hull.size(); i++)
     {
         vec2 line_start = forcefield_hull.at(i);
         vec2 line_end = forcefield_hull.at((i + 1) % forcefield_hull.size());
         line_start.x += HEALTHBAR_OFFSET;
         line_end.x += HEALTHBAR_OFFSET;
         screen->line(line_start, line_end, 0x0000ff);
-    }
+    }*/
+    auto sorted_result = future_sort.get();
+    draw_health_bars(sorted_result[0], 0); // Blue team
+    draw_health_bars(sorted_result[1], 1); // Red team
 
-    //Draw sorted health bars
-    for (int t = 0; t < 2; t++)
-    {
-        const int NUM_TANKS = ((t < 1) ? num_tanks_blue : num_tanks_red);
-
-        const int begin = ((t < 1) ? 0 : num_tanks_blue);
-        std::vector<const Tank*> sorted_tanks;
-        sorted_tanks.reserve(NUM_TANKS);
-        for (int i = begin; i < begin + NUM_TANKS; ++i)
-            if (tanks[i].active)
-                sorted_tanks.push_back(&tanks[i]);
-
-        std::vector<const Tank*> temp = sorted_tanks; // temp buffer for merge
-        merge_sort_tanks_health(sorted_tanks, temp, 0, sorted_tanks.size());
-
-
-        draw_health_bars(sorted_tanks, t);
-    }
 }
 
 // -----------------------------------------------------------
-// Sort tanks by health value using insertion sort                         <------ F tier
+// Sort tanks by health value using insertion sort                         <------ F tier unused
 // -----------------------------------------------------------
 void Tmpl8::Game::insertion_sort_tanks_health(const std::vector<Tank>& original, std::vector<const Tank*>& sorted_tanks, int begin, int end)
 {
