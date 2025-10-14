@@ -136,15 +136,39 @@ bool Game::left_of_line(vec2 line_start, vec2 line_end, vec2 point)
 }
 
 //------------------------------------------------------------ segmentated functions from update, might get own files later.
-void Game::calc_tank_route(){
+void Game::calc_tank_route() {
     if (frame_count == 0)
     {
-        for (Tank& t : tanks)
+        //dividing workload
+        const size_t numThreads = pool.get_num_threads();
+        const size_t numTanks = tanks.size();
+        const size_t chunkSize = (numTanks + numThreads - 1) / numThreads; // + numthread - 1 to prevent last chunk being too small
+
+        std::vector<std::future<void>> futures;
+        futures.reserve(numThreads);
+
+        for (size_t t = 0; t < numThreads; ++t)
         {
-            t.set_route(background_terrain.get_route_greedy(t, t.target));
+            size_t start = t * chunkSize;
+            size_t end = std::min(start + chunkSize, numTanks);
+
+            if (start >= numTanks) break;
+
+            futures.push_back(pool.enqueue([this, start, end]() {
+                for (size_t i = start; i < end; i++)
+                {
+                    Tank& t1 = tanks[i];
+                    if (!t1.active) continue;
+                    t1.set_route(background_terrain.get_route_greedy(t1, t1.target));
+                }
+            }));
         }
+
+        // Wait for all threads to complete
+        for (auto& f : futures) f.get();
     }
 }
+
 
 
 void Game::check_tank_collision() {
@@ -176,48 +200,73 @@ void Game::check_tank_collision() {
 //----------------------------------------------------------------------------------------------------------------------------------------------------
 void Game::update_tank_collision(Grid* grid)
 {
-    for (int i = 0; i < grid->m_cells.size(); i++)
+    const size_t numThreads = pool.get_num_threads();
+    const size_t numTanks = tanks.size();
+    const size_t chunkSize = (numTanks + numThreads - 1) / numThreads; // + numthread - 1 to prevent last chunk being too small
+
+    std::vector<std::future<void>> futures;
+    futures.reserve(numThreads);
+
+    for (size_t t = 0; t < numThreads; ++t)
     {
-        int x = i % grid->m_numXCells;
-        int y = i / grid->m_numXCells;
+        size_t start = t * chunkSize; //thread starts with this tank index
+        size_t end = std::min(start + chunkSize, numTanks); //thread ends with this tank index
 
-        Cell& cell = grid->m_cells[i];
+        // If there’s no work left, skip
+        if (start >= numTanks) break;
 
-        for (int j = 0; j < cell.tanks.size(); j++)
-        {
-            Tank* t1 = cell.tanks[j];
-            if (!t1->active) continue;
-
-            // Loop over the 3x3 neighborhood
-            for (int nx = x - 1; nx <= x + 1; nx++)
+        // Enqueue each chunk as a separate task
+        futures.push_back(pool.enqueue([this, grid, start, end]() { //start thread with following loop
+            for (size_t i = start; i < end; i++)
             {
-                if (nx < 0 || nx >= grid->m_numXCells) continue;
+                Tank& t1 = tanks[i];
+                if (!t1.active) continue; //tank dead
 
-                for (int ny = y - 1; ny <= y + 1; ny++)
+                // Find the cell containing this tank
+                Cell* cell = grid->get_cell(t1.position);
+                if (!cell) continue;
+
+                int cellIndex = static_cast<int>(cell - &grid->m_cells[0]);
+                int x = cellIndex % grid->m_numXCells;
+                int y = cellIndex / grid->m_numXCells;
+
+                // Loop over 3x3 neighborhood
+                for (int nx = x - 1; nx <= x + 1; nx++)
                 {
-                    if (ny < 0 || ny >= grid->m_numYCells) continue;
+                    if (nx < 0 || nx >= grid->m_numXCells) continue;
 
-                    Cell* neighbor = grid->get_cell(nx, ny);
-                    if (!neighbor) continue;
-
-                    // Check collisions with all tanks in this neighbor cell
-                    for (Tank* t2 : neighbor->tanks)
+                    for (int ny = y - 1; ny <= y + 1; ny++)
                     {
-                        // Avoid double-checking same pair
-                        if (!t2->active || (t1 == t2)) continue;
+                        if (ny < 0 || ny >= grid->m_numYCells) continue;
 
-                        vec2 dir = t1->position - t2->position;
-                        float col_dist2 = powf(t1->collision_radius + t2->collision_radius, 2.0f);
-                        if (dir.sqr_length() < col_dist2)
+                        Cell* neighbor = grid->get_cell(nx, ny);
+                        if (!neighbor) continue;
+
+                        // Check collisions against tanks in this neighbor cell
+                        for (Tank* t2 : neighbor->tanks)
                         {
-                            t1->push(dir.normalized(), 1.f);
+                            if (!t2->active || &t1 == t2) continue;
+
+                            vec2 dir = t1.position - t2->position;
+                            float col_dist2 = powf(t1.collision_radius + t2->collision_radius, 2.0f);
+
+                            if (dir.sqr_length() < col_dist2)
+                            {
+                                t1.push(dir.normalized(), 1.f);
+                            }
                         }
                     }
                 }
             }
-        }
+            }));
     }
+
+    // Wait for all threads to complete
+    for (auto& f : futures)
+        f.get();
 }
+
+
 
 
 void Game::update_tanks() {
@@ -231,8 +280,7 @@ void Game::update_tanks() {
             //Shoot at closest target if reloaded
             if (tank.rocket_reloaded())
             {
-                Tank& target = find_closest_enemy(tank);
-
+                Tank& target = find_closest_enemy(tank); //TODO great lagspike
                 rockets.push_back(Rocket(tank.position, (target.get_position() - tank.position).normalized() * 3, rocket_radius, tank.allignment, ((tank.allignment == RED) ? &rocket_red : &rocket_blue)));
 
                 tank.reload_rocket();
