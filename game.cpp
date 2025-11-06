@@ -607,7 +607,7 @@ void Game::draw()
         explosion.draw(screen);
     }
 
-    //Draw forcefield (mostly for debugging <-- turned it off) 
+    //Draw forcefield (mostly for debugging <-- so I turned it off) 
     /*for (size_t i = 0; i < forcefield_hull.size(); i++)
     {
         vec2 line_start = forcefield_hull.at(i);

@@ -151,21 +151,21 @@ namespace Tmpl8
             TerrainTile* start_tile = &tiles.at(start_y).at(start_x);
             TerrainTile* target_tile = &tiles.at(target_y).at(target_x);
 
-            // Min-heap priority queue for open set
+            //min-heap priority queue for open set, lowest cost on top
             std::priority_queue<Node, std::vector<Node>, std::greater<Node>> open_set;
 
-            // Push the start tile with its heuristic cost
+            //push the start tile with its heuristic cost
             float h_start = heuristic(vec2(start_tile->position_x * sprite_size, start_tile->position_y * sprite_size),
                 vec2(target_x * sprite_size, target_y * sprite_size));
             open_set.push({ start_tile, h_start });
 
-            // Map to store parent of each tile
+            //map to store parent of each tile
             std::unordered_map<TerrainTile*, TerrainTile*> came_from;
 
             bool route_found = false;
             TerrainTile* current_tile = nullptr;
 
-            // Greedy Best-First Search
+            //greedy Best-First Search
             while (!open_set.empty()) {
                 Node current_node = open_set.top();
                 open_set.pop();
